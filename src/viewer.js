@@ -501,6 +501,25 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
     /**
      * @function
+     * @name OpenSeadragon.Viewer.prototype.reset
+     * @return {OpenSeadragon.Viewer} Chainable.
+     */
+    reset: function() {
+
+        this.drawer.lastDrawn = [];
+        this.drawer.reset();
+
+        this.viewport   = this.preserveViewport ? this.viewport : null;
+
+        this.raiseEvent( 'reset' );
+
+        return this;
+
+    },
+
+
+    /**
+     * @function
      * @name OpenSeadragon.Viewer.prototype.close
      * @return {OpenSeadragon.Viewer} Chainable.
      */
@@ -1222,56 +1241,32 @@ function openTileSource( viewer, source ) {
         i;
 
     if ( _this.source ) {
-        _this.close( );
+        //_this.close( );
+        _this.reset( );
     }
 
-    _this.canvas.innerHTML = "";
+    // _this.canvas.innerHTML = "";
     THIS[ _this.hash ].prevContainerSize = _getSafeElemSize( _this.container );
 
-
-    if( _this.collectionMode ){
-        _this.source = new $.TileSourceCollection({
-            rows: _this.collectionRows,
-            layout: _this.collectionLayout,
-            tileSize: _this.collectionTileSize,
-            tileSources: _this.tileSources,
-            tileMargin: _this.collectionTileMargin
-        });
-        _this.viewport = _this.viewport ? _this.viewport : new $.Viewport({
-            collectionMode:         true,
-            collectionTileSource:   _this.source,
-            containerSize:          THIS[ _this.hash ].prevContainerSize,
-            contentSize:            _this.source.dimensions,
-            springStiffness:        _this.springStiffness,
-            animationTime:          _this.animationTime,
-            showNavigator:          false,
-            minZoomImageRatio:      1,
-            maxZoomPixelRatio:      1,
-            viewer:                 _this //,
-            //TODO: figure out how to support these in a way that makes sense
-            //minZoomLevel:           this.minZoomLevel,
-            //maxZoomLevel:           this.maxZoomLevel
-        });
-    }else{
-        if( source ){
-            _this.source = source;
-        }
-        _this.viewport = _this.viewport ? _this.viewport : new $.Viewport({
-            containerSize:      THIS[ _this.hash ].prevContainerSize,
-            contentSize:        _this.source.dimensions,
-            springStiffness:    _this.springStiffness,
-            animationTime:      _this.animationTime,
-            minZoomImageRatio:  _this.minZoomImageRatio,
-            maxZoomPixelRatio:  _this.maxZoomPixelRatio,
-            visibilityRatio:    _this.visibilityRatio,
-            wrapHorizontal:     _this.wrapHorizontal,
-            wrapVertical:       _this.wrapVertical,
-            defaultZoomLevel:   _this.defaultZoomLevel,
-            minZoomLevel:       _this.minZoomLevel,
-            maxZoomLevel:       _this.maxZoomLevel,
-            viewer:             _this
-        });
+    if( source ){
+        window.console.log('new source', source);
+        _this.source = source;
     }
+    _this.viewport = _this.viewport ? _this.viewport : new $.Viewport({
+        containerSize:      THIS[ _this.hash ].prevContainerSize,
+        contentSize:        _this.source.dimensions,
+        springStiffness:    _this.springStiffness,
+        animationTime:      _this.animationTime,
+        minZoomImageRatio:  _this.minZoomImageRatio,
+        maxZoomPixelRatio:  _this.maxZoomPixelRatio,
+        visibilityRatio:    _this.visibilityRatio,
+        wrapHorizontal:     _this.wrapHorizontal,
+        wrapVertical:       _this.wrapVertical,
+        defaultZoomLevel:   _this.defaultZoomLevel,
+        minZoomLevel:       _this.minZoomLevel,
+        maxZoomLevel:       _this.maxZoomLevel,
+        viewer:             _this
+    });
 
     if( _this.preserveViewport ){
         _this.viewport.resetContentSize( _this.source.dimensions );
@@ -1279,7 +1274,7 @@ function openTileSource( viewer, source ) {
 
     _this.source.overlays = _this.source.overlays || [];
 
-    _this.drawer = new $.Drawer({
+    _this.drawer = _this.drawer ? _this.drawer : new $.Drawer({
         viewer:             _this,
         source:             _this.source,
         viewport:           _this.viewport,
@@ -1321,61 +1316,12 @@ function openTileSource( viewer, source ) {
         }
     }
 
-    //Instantiate a referencestrip if configured
-    if ( _this.showReferenceStrip  && !_this.referenceStrip ){
-        _this.referenceStrip = new $.ReferenceStrip({
-            id:          _this.referenceStripElement,
-            position:    _this.referenceStripPosition,
-            sizeRatio:   _this.referenceStripSizeRatio,
-            scroll:      _this.referenceStripScroll,
-            height:      _this.referenceStripHeight,
-            width:       _this.referenceStripWidth,
-            tileSources: _this.tileSources,
-            tileHost:    _this.tileHost,
-            prefixUrl:   _this.prefixUrl,
-            overlays:    _this.overlays,
-            viewer:      _this
-        });
-    }
-
     //this.profiler = new $.Profiler();
 
     THIS[ _this.hash ].animating = false;
     THIS[ _this.hash ].forceRedraw = true;
     _this._updateRequestId = scheduleUpdate( _this, updateMulti );
 
-    //Assuming you had programatically created a bunch of overlays
-    //and added them via configuration
-    for ( i = 0; i < _this.overlayControls.length; i++ ) {
-
-        overlay = _this.overlayControls[ i ];
-
-        if ( overlay.point ) {
-
-            _this.drawer.addOverlay(
-                overlay.id,
-                new $.Point(
-                    overlay.point.X,
-                    overlay.point.Y
-                ),
-                $.OverlayPlacement.TOP_LEFT
-            );
-
-        } else {
-
-            _this.drawer.addOverlay(
-                overlay.id,
-                new $.Rect(
-                    overlay.rect.Point.X,
-                    overlay.rect.Point.Y,
-                    overlay.rect.Width,
-                    overlay.rect.Height
-                ),
-                overlay.placement
-            );
-
-        }
-    }
     VIEWERS[ _this.hash ] = _this;
 
     _this.raiseEvent( 'open', { source: source } );

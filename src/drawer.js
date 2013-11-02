@@ -323,6 +323,35 @@ $.Drawer.prototype = {
         return this;
     },
 
+
+    /**
+     * @method
+     */
+    clear: function() {
+
+        var viewportSize = this.viewport.getContainerSize();
+        
+        if ( USE_CANVAS ) {
+
+            if( this.canvas.width  != viewportSize.x ||
+                this.canvas.height != viewportSize.y ){
+                this.canvas.width  = viewportSize.x;
+                this.canvas.height = viewportSize.y;
+            }
+            this.context.clearRect( 0, 0, viewportSize.x, viewportSize.y );
+            window.console.log('clearing cnavas', viewportSize.x, viewportSize.y);
+
+        } else {
+
+            // if no canvas
+            this.canvas.innerHTML   = "";
+
+        }
+
+        return this;
+
+    },
+
     /**
      * Forces the Drawer to update.
      * @method
@@ -464,6 +493,7 @@ $.Drawer.prototype = {
 
 }
 
+
 /**
  * @private
  * @inner
@@ -478,7 +508,7 @@ function updateViewport( drawer ) {
     if( drawer.viewer ){
         drawer.viewer.raiseEvent( 'update-viewport', {} );
     }
-
+    
     var tile,
         level,
         best            = null,
@@ -518,17 +548,6 @@ function updateViewport( drawer ) {
     while ( drawer.lastDrawn.length > 0 ) {
         tile = drawer.lastDrawn.pop();
         tile.beingDrawn = false;
-    }
-
-    //TODO
-    drawer.canvas.innerHTML   = "";
-    if ( USE_CANVAS ) {
-        if( drawer.canvas.width  != viewportSize.x ||
-            drawer.canvas.height != viewportSize.y ){
-            drawer.canvas.width  = viewportSize.x;
-            drawer.canvas.height = viewportSize.y;
-        }
-        drawer.context.clearRect( 0, 0, viewportSize.x, viewportSize.y );
     }
 
     //Change bounds for rotation

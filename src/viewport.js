@@ -372,6 +372,8 @@ $.Viewport.prototype = {
             });
         }
 
+        this.viewer.drawer.clear();
+
         return this;
     },
 
