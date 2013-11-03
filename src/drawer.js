@@ -519,7 +519,7 @@ function updateViewport( drawer ) {
         levelOpacity,
         levelVisibility;
 
-    window.console.log('h',highestLevel, 'l', lowestLevel);
+    // window.console.log('h',highestLevel, 'l', lowestLevel);
 
     //TODO
     while ( drawer.lastDrawn.length > 0 ) {
@@ -651,7 +651,7 @@ function updateViewport( drawer ) {
         // because we haven't finished drawing, so
         drawer.updateAgain = true;
     } else {
-        window.console.log(level);
+        // window.console.log(level);
 
         // we are done updating
         drawer.viewer.raiseEvent( 'update-done' );

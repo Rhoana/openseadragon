@@ -1141,7 +1141,11 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                 _this.drawer2.draw = true;
                 _this.drawer = _this.drawer2;
 
-                _this.open( _this.tileSources[ page+1 ],  true );
+                window.console.log(page);
+
+                if (_this.tileSources.length > page+1) {
+                    _this.open( _this.tileSources[ page+1 ],  true );
+                }
 
             });
 
