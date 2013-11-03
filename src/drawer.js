@@ -125,7 +125,8 @@ $.Drawer = function( options ) {
     }, options );
 
     this.container  = $.getElement( this.element );
-    this.canvas     = $.makeNeutralElement( USE_CANVAS ? "canvas" : "div" );
+    this.canvas     = $.getElement( this.canvas ); //$.makeNeutralElement( USE_CANVAS ? "canvas" : "div" );
+    //this.canvas = $.makeNeutralElement( USE_CANVAS ? "canvas" : "div" );
     this.context    = USE_CANVAS ? this.canvas.getContext( "2d" ) : null;
     this.normHeight = this.source.dimensions.y / this.source.dimensions.x;
     this.element    = this.container;
@@ -141,7 +142,11 @@ $.Drawer = function( options ) {
 
     // explicit left-align
     this.container.style.textAlign = "left";
-    this.container.appendChild( this.canvas );
+    //window.console.log('invisible', this.invisible);
+    //if (!this.invisible) {
+        this.container.appendChild( this.canvas );
+     //   window.console.log('appended child', this.container, this.canvas);
+    //}
 
     //create the correct type of overlay by convention if the overlays
     //are not already OpenSeadragon.Overlays
@@ -514,6 +519,8 @@ function updateViewport( drawer ) {
         levelOpacity,
         levelVisibility;
 
+    window.console.log('h',highestLevel, 'l', lowestLevel);
+
     //TODO
     while ( drawer.lastDrawn.length > 0 ) {
         tile = drawer.lastDrawn.pop();
@@ -521,14 +528,16 @@ function updateViewport( drawer ) {
     }
 
     //TODO
-    drawer.canvas.innerHTML   = "";
-    if ( USE_CANVAS ) {
-        if( drawer.canvas.width  != viewportSize.x ||
-            drawer.canvas.height != viewportSize.y ){
-            drawer.canvas.width  = viewportSize.x;
-            drawer.canvas.height = viewportSize.y;
+    if (drawer.draw) {
+        drawer.canvas.innerHTML   = "";
+        if ( USE_CANVAS ) {
+            if( drawer.canvas.width  != viewportSize.x ||
+                drawer.canvas.height != viewportSize.y ){
+                drawer.canvas.width  = viewportSize.x;
+                drawer.canvas.height = viewportSize.y;
+            }
+            drawer.context.clearRect( 0, 0, viewportSize.x, viewportSize.y );
         }
-        drawer.context.clearRect( 0, 0, viewportSize.x, viewportSize.y );
     }
 
     //Change bounds for rotation
@@ -560,6 +569,10 @@ function updateViewport( drawer ) {
 
     //TODO
     lowestLevel = Math.min( lowestLevel, highestLevel );
+
+    // if (!drawer.draw) {
+    //     highestLevel = lowestLevel;
+    // }
 
     //TODO
     var drawLevel; // FIXME: drawLevel should have a more explanatory name
@@ -627,14 +640,21 @@ function updateViewport( drawer ) {
     }
 
     //TODO
-    drawTiles( drawer, drawer.lastDrawn );
-    drawOverlays( drawer.viewport, drawer.overlays, drawer.container );
+    if (drawer.draw) {
+        drawTiles( drawer, drawer.lastDrawn );
+        drawOverlays( drawer.viewport, drawer.overlays, drawer.container );
+    }
 
     //TODO
     if ( best ) {
         loadTile( drawer, best, currentTime );
         // because we haven't finished drawing, so
         drawer.updateAgain = true;
+    } else {
+        window.console.log(level);
+
+        // we are done updating
+        drawer.viewer.raiseEvent( 'update-done' );
     }
 
 }

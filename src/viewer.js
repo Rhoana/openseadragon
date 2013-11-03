@@ -361,6 +361,9 @@ $.Viewer = function( options ) {
 
     if ( initialTileSource ) {
         this.open( initialTileSource );
+        if (this.id[0] != 'n') {
+            this.open( this.tileSources[ this.initialPage+1 ],  true );
+        }
 
         if ( this.tileSources.length > 1 ) {
             this._updateSequenceButtons( this.initialPage );
@@ -440,7 +443,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
      * @param {String|Object|Function}
      * @return {OpenSeadragon.Viewer} Chainable.
      */
-    open: function ( tileSource ) {
+    open: function ( tileSource, prepare ) {
         var _this = this,
             customTileSource,
             readySource,
@@ -463,7 +466,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             if ( $.type( tileSource ) == 'string') {
                 //If its still a string it means it must be a url at this point
                 tileSource = new $.TileSource( tileSource, function( event ){
-                    openTileSource( _this, event.tileSource );
+                    openTileSource( _this, event.tileSource, prepare );
                 });
                 tileSource.addHandler( 'open-failed', function ( event ) {
                     _this.raiseEvent( 'open-failed', event );
@@ -474,7 +477,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     //Custom tile source
                     customTileSource = new $.TileSource(tileSource);
                     customTileSource.getTileUrl = tileSource.getTileUrl;
-                    openTileSource( _this, customTileSource );
+                    openTileSource( _this, customTileSource, prepare );
                 } else {
                     //inline configuration
                     $TileSource = $.TileSource.determineType( _this, tileSource );
@@ -487,15 +490,26 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     }
                     options = $TileSource.prototype.configure.apply( _this, [ tileSource ]);
                     readySource = new $TileSource( options );
-                    openTileSource( _this, readySource );
+                    openTileSource( _this, readySource, prepare );
                 }
             } else {
                 //can assume it's already a tile source implementation
-                openTileSource( _this, tileSource );
+                openTileSource( _this, tileSource, prepare );
             }
         }, 1);
 
         return this;
+    },
+
+    open2: function(tileSource) {
+        var _this = this;
+            //If its still a string it means it must be a url at this point
+            tileSource = new $.TileSource( tileSource, function( event ){
+                prepareNextTileSource( _this, event.tileSource );
+            });
+            tileSource.addHandler( 'open-failed', function ( event ) {
+                _this.raiseEvent( 'open-failed', event );
+            });
     },
 
 
@@ -1117,7 +1131,34 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
             this._updateSequenceButtons( page );
 
-            this.open( this.tileSources[ page ] );
+            this.addHandler( 'update-done', function(event) {
+
+                var _this = event.eventSource; // the viewer
+
+                _this.removeAllHandlers( 'update-done' );
+
+                
+                _this.drawer2.draw = true;
+                _this.drawer = _this.drawer2;
+
+                _this.open( _this.tileSources[ page+1 ],  true );
+
+            });
+
+            while(this.drawer2.updateAgain) {
+                this.drawer2.update();
+                // window.console.log('a');
+            }
+
+            // for(var i=0;i<19;i++) {
+            //     this.drawer2.update();
+            // }
+
+
+
+            //this.open( this.tileSources[ page ] );
+
+            //this.open( this.tileSources[ this.initialPage+1 ],  true );
         }
 
         if( $.isFunction( this.onPageChange ) ){
@@ -1212,17 +1253,57 @@ function _getSafeElemSize (oElement) {
     );
 }
 
+function prepareNextTileSource(viewer, source) {
+
+    window.console.log('next ts');
+
+   var  _this = viewer;
+        if( source ){
+            _this.source = source;
+        } else {
+            return;
+                }
+    _this.drawer2 = new $.Drawer({
+        viewer:             _this,
+        source:             _this.source,
+        viewport:           _this.viewport,
+        element:            _this.canvas,
+        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+        maxImageCacheCount: _this.maxImageCacheCount,
+        imageLoaderLimit:   _this.imageLoaderLimit,
+        minZoomImageRatio:  _this.minZoomImageRatio,
+        wrapHorizontal:     _this.wrapHorizontal,
+        wrapVertical:       _this.wrapVertical,
+        immediateRender:    _this.immediateRender,
+        blendTime:          _this.blendTime,
+        alwaysBlend:        _this.alwaysBlend,
+        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+        timeout:            _this.timeout,
+        debugMode:          _this.debugMode,
+        debugGridColor:     _this.debugGridColor
+    });
+}
+
 /**
  * @function
  * @private
  */
-function openTileSource( viewer, source ) {
+function openTileSource( viewer, source, prepare ) {
+
+
+    if (typeof prepare == 'undefined') {
+        prepare = false;
+    }
+
+
+    window.console.log("opentilesource", prepare);
+
     var _this = viewer,
         overlay,
         i;
 
     if ( _this.source ) {
-        _this.close( );
+        //_this.close( );
     }
 
     _this.canvas.innerHTML = "";
@@ -1279,11 +1360,38 @@ function openTileSource( viewer, source ) {
 
     _this.source.overlays = _this.source.overlays || [];
 
+    if (prepare) {
+    _this.drawer2 = new $.Drawer({
+        viewer:             _this,
+        source:             _this.source,
+        viewport:           _this.viewport,
+        element:            _this.canvas,
+        canvas:             _this.drawer.canvas,
+        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+        maxImageCacheCount: _this.maxImageCacheCount,
+        imageLoaderLimit:   _this.imageLoaderLimit,
+        minZoomImageRatio:  _this.minZoomImageRatio,
+        wrapHorizontal:     _this.wrapHorizontal,
+        wrapVertical:       _this.wrapVertical,
+        draw: false,
+        immediateRender:    _this.immediateRender,
+        blendTime:          _this.blendTime,
+        alwaysBlend:        _this.alwaysBlend,
+        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+        timeout:            _this.timeout,
+        debugMode:          _this.debugMode,
+        debugGridColor:     _this.debugGridColor
+    });
+    return;
+    }
+    window.console.log(_this, 'creating drawer');
     _this.drawer = new $.Drawer({
         viewer:             _this,
         source:             _this.source,
         viewport:           _this.viewport,
         element:            _this.canvas,
+        draw: true,
+        canvas:             $.makeNeutralElement( "canvas" ),
         overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
         maxImageCacheCount: _this.maxImageCacheCount,
         imageLoaderLimit:   _this.imageLoaderLimit,
@@ -1300,7 +1408,7 @@ function openTileSource( viewer, source ) {
     });
 
     //Instantiate a navigator if configured
-    if ( _this.showNavigator  && !_this.collectionMode ){
+    if ( _this.showNavigator  && !_this.collectionMode && !prepare){
         // Note: By passing the fully parsed source, the navigator doesn't
         // have to load it again.
         if ( _this.navigator ) {
