@@ -370,7 +370,7 @@ $.Viewer = function( options ) {
         if (this.tileSources.length > 1) {
 
             // if there are multiple tilesources, open as many as zCacheSize states
-            for(var j=1; j<=this.zCacheSize; ++j) {
+            for(var j=this.zCacheSize; j>0; --j) {
                 this.open( this.tileSources[ this.initialPage + j ], j );
             }
 
@@ -1137,7 +1137,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             return;
         }
 
-        window.console.log('0 ' + page);
+        //window.console.log('0 ' + page);
 
         this.raiseEvent( 'page', { page: page } );
 
@@ -1156,7 +1156,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
         // finished loading
         this.addHandler( 'update-done', function(event) {
 
-            window.console.log('3 update-done', page);
+            //window.console.log('3 update-done', page);
 
             var _this = event.eventSource; // the viewer
 
@@ -1176,7 +1176,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
             
 
-            window.console.log('4 beforeTileSource',page, _this.tileSources.length);
+            //window.console.log('4 beforeTileSource',page, _this.tileSources.length);
 
             // setup the next drawer if there is any
             //var newPage = forward ? page + 1 : page - 1;
@@ -1195,27 +1195,27 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
             var newPage = forward ? page + 1 : page - 1;
             if (_this.tileSources.length > newPage && newPage >= 0) {
-                window.console.log('5 shown', page, 'request', newPage);
+                // window.console.log('5 shown', page, 'request', newPage);
                 _this.open( _this.tileSources[ newPage ], newPage );
             }
 
         });
 
-        window.console.log('1 before DrawerStack length', drawerStack.length, forward);
+        //window.console.log('1 before DrawerStack length', drawerStack.length, forward);
 
         // prepare the next drawer if there is any
         if ( drawerStack.length > 0 ) {
 
             this.drawerNew = drawerStack.pop();
 
-            window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
+            //window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
 
             // and start loading the tiles
             while(this.drawerNew.updateAgain) {
                 this.drawerNew.update();
             }
 
-            window.console.log('6 updateAgainFalse', this.drawerNew.updateAgain);
+            //window.console.log('6 updateAgainFalse', this.drawerNew.updateAgain);
 
         }
 
@@ -1312,36 +1312,6 @@ function _getSafeElemSize (oElement) {
     );
 }
 
-function prepareNextTileSource(viewer, source) {
-
-    window.console.log('next ts');
-
-   var  _this = viewer;
-        if( source ){
-            _this.source = source;
-        } else {
-            return;
-                }
-    _this.drawer2 = new $.Drawer({
-        viewer:             _this,
-        source:             _this.source,
-        viewport:           _this.viewport,
-        element:            _this.canvas,
-        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
-        maxImageCacheCount: _this.maxImageCacheCount,
-        imageLoaderLimit:   _this.imageLoaderLimit,
-        minZoomImageRatio:  _this.minZoomImageRatio,
-        wrapHorizontal:     _this.wrapHorizontal,
-        wrapVertical:       _this.wrapVertical,
-        immediateRender:    _this.immediateRender,
-        blendTime:          _this.blendTime,
-        alwaysBlend:        _this.alwaysBlend,
-        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
-        timeout:            _this.timeout,
-        debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor
-    });
-}
 
 /**
  * @function
@@ -1355,7 +1325,7 @@ function openTileSource( viewer, source, j ) {
     }
 
 
-    window.console.log("opentilesource", j);
+    // window.console.log("opentilesource", j);
 
     var _this = viewer,
         overlay,
@@ -1419,7 +1389,7 @@ function openTileSource( viewer, source, j ) {
 
     _this.source.overlays = _this.source.overlays || [];
 
-    if (j !== 0) {
+    if (_this.drawer ) {
 
         // check if we are moving forward
         var forward = (j > _this.currentPage());
