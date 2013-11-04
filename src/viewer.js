@@ -126,7 +126,11 @@ $.Viewer = function( options ) {
         //in initialize.  Its still considered idiomatic to put them here
         source:         null,
         drawer:         null,
+        drawerNew:      null,
         drawers:        [],
+        drawerPrev:     [],
+        drawerNext:     [],
+        zCacheSize:     1,
         viewport:       null,
         navigator:      null,
 
@@ -360,12 +364,27 @@ $.Viewer = function( options ) {
     this.bindSequenceControls();
 
     if ( initialTileSource ) {
-        this.open( initialTileSource );
-        if (this.id[0] != 'n') {
-            this.open( this.tileSources[ this.initialPage+1 ],  true );
+        // open the first tile source (j=0)
+        this.open( initialTileSource, 0 );
+        
+        if (this.tileSources.length > 1) {
+
+            // if there are multiple tilesources, open as many as zCacheSize states
+            for(var j=1; j<=this.zCacheSize; ++j) {
+                this.open( this.tileSources[ this.initialPage + j ], j );
+            }
+
         }
 
+        // if (this.id[0] != 'n') {
+        //     this.open( this.tileSources[ this.initialPage+1 ],  true );
+        // }
+
         if ( this.tileSources.length > 1 ) {
+
+            // setup sequence preloading for smooth transitioning between images
+            
+
             this._updateSequenceButtons( this.initialPage );
         }
     }
@@ -443,7 +462,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
      * @param {String|Object|Function}
      * @return {OpenSeadragon.Viewer} Chainable.
      */
-    open: function ( tileSource, prepare ) {
+    open: function ( tileSource, i ) {
         var _this = this,
             customTileSource,
             readySource,
@@ -466,7 +485,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             if ( $.type( tileSource ) == 'string') {
                 //If its still a string it means it must be a url at this point
                 tileSource = new $.TileSource( tileSource, function( event ){
-                    openTileSource( _this, event.tileSource, prepare );
+                    openTileSource( _this, event.tileSource, i );
                 });
                 tileSource.addHandler( 'open-failed', function ( event ) {
                     _this.raiseEvent( 'open-failed', event );
@@ -477,7 +496,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     //Custom tile source
                     customTileSource = new $.TileSource(tileSource);
                     customTileSource.getTileUrl = tileSource.getTileUrl;
-                    openTileSource( _this, customTileSource, prepare );
+                    openTileSource( _this, customTileSource, i );
                 } else {
                     //inline configuration
                     $TileSource = $.TileSource.determineType( _this, tileSource );
@@ -490,26 +509,15 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     }
                     options = $TileSource.prototype.configure.apply( _this, [ tileSource ]);
                     readySource = new $TileSource( options );
-                    openTileSource( _this, readySource, prepare );
+                    openTileSource( _this, readySource, i );
                 }
             } else {
                 //can assume it's already a tile source implementation
-                openTileSource( _this, tileSource, prepare );
+                openTileSource( _this, tileSource, i );
             }
         }, 1);
 
         return this;
-    },
-
-    open2: function(tileSource) {
-        var _this = this;
-            //If its still a string it means it must be a url at this point
-            tileSource = new $.TileSource( tileSource, function( event ){
-                prepareNextTileSource( _this, event.tileSource );
-            });
-            tileSource.addHandler( 'open-failed', function ( event ) {
-                _this.raiseEvent( 'open-failed', event );
-            });
     },
 
 
@@ -1123,47 +1131,94 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
     goToPage: function( page ){
         //page is a 1 based index so normalize now
         //page = page;
+
+        if (page < 0 || page == this.tileSources.length) {
+            // invalid page
+            return;
+        }
+
+        window.console.log('0 ' + page);
+
         this.raiseEvent( 'page', { page: page } );
 
-        if( this.tileSources.length > page ){
+        // check if we are moving forward
+        var forward = (page > THIS[ this.hash ].sequence);
 
-            THIS[ this.hash ].sequence = page;
+        THIS[ this.hash ].sequence = page;
 
-            this._updateSequenceButtons( page );
+        this._updateSequenceButtons( page );
 
-            this.addHandler( 'update-done', function(event) {
+        // the drawerStack depends on which direction we move in the sequence strip
+        var drawerStack = forward ? this.drawerNext : this.drawerPrev;
 
-                var _this = event.eventSource; // the viewer
+        // install the handler to listen to a single update-done event
+        // which gets fired once the next or previous drawer has
+        // finished loading
+        this.addHandler( 'update-done', function(event) {
 
-                _this.removeAllHandlers( 'update-done' );
+            window.console.log('3 update-done', page);
 
-                
-                _this.drawer2.draw = true;
-                _this.drawer = _this.drawer2;
+            var _this = event.eventSource; // the viewer
 
-                window.console.log(page);
+            _this.removeAllHandlers( 'update-done' );
 
-                if (_this.tileSources.length > page+1) {
-                    _this.open( _this.tileSources[ page+1 ],  true );
-                }
+            // activate drawing for the new drawer
+            _this.drawerNew.draw = true;
 
-            });
+            // update the opposite drawerStack with the current drawer
+            var antiDrawerStack = forward ? _this.drawerPrev : _this.drawerNext;
+            _this.drawer.updateAgain = true;
+            antiDrawerStack.splice(0,1);
+            antiDrawerStack.push( _this.drawer );
 
-            while(this.drawer2.updateAgain) {
-                this.drawer2.update();
-                // window.console.log('a');
+            // and replace it with the new one
+            _this.drawer = _this.drawerNew;
+
+            
+
+            window.console.log('4 beforeTileSource',page, _this.tileSources.length);
+
+            // setup the next drawer if there is any
+            //var newPage = forward ? page + 1 : page - 1;
+
+            // window.console.log('prevStack', _this.drawerPrev.length);
+            // window.console.log('nextStack', _this.drawerNext.length);
+
+            // check if we have enough cached tileSources
+            // if yes, then exit
+            if (forward && _this.drawerNext.length == _this.zCacheSize) {
+                return;
+            }
+            if (!forward && _this.drawerPrev.length == _this.zCacheSize) {
+                return;
             }
 
-            // for(var i=0;i<19;i++) {
-            //     this.drawer2.update();
-            // }
+            var newPage = forward ? page + 1 : page - 1;
+            if (_this.tileSources.length > newPage && newPage >= 0) {
+                window.console.log('5 shown', page, 'request', newPage);
+                _this.open( _this.tileSources[ newPage ], newPage );
+            }
 
+        });
 
+        window.console.log('1 before DrawerStack length', drawerStack.length, forward);
 
-            //this.open( this.tileSources[ page ] );
+        // prepare the next drawer if there is any
+        if ( drawerStack.length > 0 ) {
 
-            //this.open( this.tileSources[ this.initialPage+1 ],  true );
+            this.drawerNew = drawerStack.pop();
+
+            window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
+
+            // and start loading the tiles
+            while(this.drawerNew.updateAgain) {
+                this.drawerNew.update();
+            }
+
+            window.console.log('6 updateAgainFalse', this.drawerNew.updateAgain);
+
         }
+
 
         if( $.isFunction( this.onPageChange ) ){
             this.onPageChange({
@@ -1292,22 +1347,22 @@ function prepareNextTileSource(viewer, source) {
  * @function
  * @private
  */
-function openTileSource( viewer, source, prepare ) {
+function openTileSource( viewer, source, j ) {
 
 
-    if (typeof prepare == 'undefined') {
-        prepare = false;
+    if (typeof j == 'undefined') {
+        j = 0;
     }
 
 
-    window.console.log("opentilesource", prepare);
+    window.console.log("opentilesource", j);
 
     var _this = viewer,
         overlay,
         i;
 
     if ( _this.source ) {
-        //_this.close( );
+        //_this.reset( );
     }
 
     _this.canvas.innerHTML = "";
@@ -1364,31 +1419,42 @@ function openTileSource( viewer, source, prepare ) {
 
     _this.source.overlays = _this.source.overlays || [];
 
-    if (prepare) {
-    _this.drawer2 = new $.Drawer({
-        viewer:             _this,
-        source:             _this.source,
-        viewport:           _this.viewport,
-        element:            _this.canvas,
-        canvas:             _this.drawer.canvas,
-        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
-        maxImageCacheCount: _this.maxImageCacheCount,
-        imageLoaderLimit:   _this.imageLoaderLimit,
-        minZoomImageRatio:  _this.minZoomImageRatio,
-        wrapHorizontal:     _this.wrapHorizontal,
-        wrapVertical:       _this.wrapVertical,
-        draw: false,
-        immediateRender:    _this.immediateRender,
-        blendTime:          _this.blendTime,
-        alwaysBlend:        _this.alwaysBlend,
-        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
-        timeout:            _this.timeout,
-        debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor
-    });
-    return;
+    if (j !== 0) {
+
+        // check if we are moving forward
+        var forward = (j > _this.currentPage());
+
+        // the drawerStack depends on which direction we move in the sequence strip
+        var drawerStack = forward ? _this.drawerNext : _this.drawerPrev;
+
+        // create a new drawer and push it to our drawerNext stack
+        drawerStack.push( new $.Drawer({
+            viewer:             _this,
+            source:             _this.source,
+            viewport:           _this.viewport,
+            element:            _this.canvas,
+            canvas:             _this.drawer.canvas,
+            overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+            maxImageCacheCount: _this.maxImageCacheCount,
+            imageLoaderLimit:   _this.imageLoaderLimit,
+            minZoomImageRatio:  _this.minZoomImageRatio,
+            wrapHorizontal:     _this.wrapHorizontal,
+            wrapVertical:       _this.wrapVertical,
+            draw: false,
+            immediateRender:    _this.immediateRender,
+            blendTime:          _this.blendTime,
+            alwaysBlend:        _this.alwaysBlend,
+            minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+            timeout:            _this.timeout,
+            debugMode:          _this.debugMode,
+            debugGridColor:     _this.debugGridColor
+        }) );
+    
+        // now we exit since we don't want to draw right now
+        return;
+
     }
-    window.console.log(_this, 'creating drawer');
+
     _this.drawer = new $.Drawer({
         viewer:             _this,
         source:             _this.source,
@@ -1412,7 +1478,7 @@ function openTileSource( viewer, source, prepare ) {
     });
 
     //Instantiate a navigator if configured
-    if ( _this.showNavigator  && !_this.collectionMode && !prepare){
+    if ( _this.showNavigator  && !_this.collectionMode && j!==0){
         // Note: By passing the fully parsed source, the navigator doesn't
         // have to load it again.
         if ( _this.navigator ) {
