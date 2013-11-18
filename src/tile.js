@@ -194,6 +194,35 @@ $.Tile.prototype = {
             canvas.height = this.image.height;
             rendered = canvas.getContext('2d');
             rendered.drawImage( this.image, 0, 0 );
+
+            var data = rendered.createImageData(canvas.width, canvas.height);
+
+            // loop through pixel data
+            // var pos = 0;
+            // for (var v=0;v<canvas.height;v++) {
+            //     for (var u=0;u<canvas.width;u++) {
+
+            //         // calculate sine based on distance
+            //         var x2 = u - canvas.width/3;
+            //         var y2 = v - canvas.height/3;
+            //         var d = Math.sqrt(x2*x2 + y2*y2);
+            //         var t = Math.sin(d/6.0);
+
+            //         // calculate RGB values based on sine
+            //         var r = t * 200;
+            //         var g = 125 + t * 80;
+            //         var b = 235 + t * 20;
+
+            //         data.data[pos++] = Math.max(0,Math.min(255, r));
+            //         data.data[pos++] = Math.max(0,Math.min(255, g));
+            //         data.data[pos++] = Math.max(0,Math.min(255, b));
+            //         data.data[pos++] = 255;
+            //     }
+            // }
+
+            // rendered.putImageData(data, 0, 0);
+
+
             TILE_CACHE[ this.url ] = rendered;
             //since we are caching the prerendered image on a canvas
             //allow the image to not be held in memory

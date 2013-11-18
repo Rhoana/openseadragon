@@ -125,11 +125,17 @@ $.Viewer = function( options ) {
         //These are originally not part options but declared as members
         //in initialize.  Its still considered idiomatic to put them here
         source:         null,
+
         drawer:         null,
         drawerNew:      null,
-        drawers:        [],
         drawerPrev:     [],
         drawerNext:     [],
+
+        overlayDrawer:  null,
+        overlayDrawerNew: null,
+        overlayDrawerPrev: [],
+        overlayDrawerNext: [],
+
         zCacheSize:     1,
         viewport:       null,
         navigator:      null,
@@ -225,6 +231,28 @@ $.Viewer = function( options ) {
             THIS[ this.hash ].sequence = this.initialPage;
         } else {
             initialTileSource = this.tileSources;
+        }
+    }
+
+    //Deal with tile sources
+    var initialTileOverlaySource;
+
+    if ( this.tileOverlaySources  ){
+        // tileSources is a complex option...
+        //
+        // It can be a string, object, or an array of any of strings and objects.
+        // At this point we only care about if it is an Array or not.
+        //
+        if( $.isArray( this.tileOverlaySources ) ){
+            
+            if (this.tileSources.length != this.tileOverlaySources.length) {
+                throw new Error('The number of overlays must match the number of tileSources.');
+            }
+            
+            initialTileOverlaySource = this.tileOverlaySources[ this.initialPage ];
+            
+        } else {
+            initialTileOverlaySource = this.tileOverlaySources;
         }
     }
 
@@ -386,6 +414,20 @@ $.Viewer = function( options ) {
             
 
             this._updateSequenceButtons( this.initialPage );
+        }
+    }
+
+    if ( initialTileOverlaySource ) {
+        // open the first tile source (j=0)
+        this.open( initialTileOverlaySource, 0 );
+        
+        if (this.tileOverlaySources.length > 1) {
+
+            // if there are multiple tilesources, open as many as zCacheSize states
+            for(var k=this.zCacheSize; k>0; --k) {
+                this.open( this.tileOverlaySources[ this.initialPage + k ], k );
+            }
+
         }
     }
 
