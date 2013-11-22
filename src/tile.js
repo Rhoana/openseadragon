@@ -190,10 +190,51 @@ $.Tile.prototype = {
 
         if( !TILE_CACHE[ this.url ] ){
             canvas = document.createElement( 'canvas' );
-            canvas.width = this.image.width;
-            canvas.height = this.image.height;
+            canvas.width = 512;//this.image.width;
+            canvas.height = 512;//this.image.height;
             rendered = canvas.getContext('2d');
-            rendered.drawImage( this.image, 0, 0 );
+
+
+            //rendered.drawImage( this.image, 0, 0 );
+
+            var colormap = window.DOJO.colormap;
+
+            if (colormap) {
+
+                var data = rendered.createImageData(canvas.width, canvas.height);
+
+
+                // loop through pixel data
+                var pos = 0;
+                var max_colors = colormap ? colormap.length : 0;
+                for (var v=0;v<canvas.height;v++) {
+                    for (var u=0;u<canvas.width;u++) {
+
+                        var color;
+
+                        if (max_colors > 0) {
+
+                            color = colormap[this.image[pos] % max_colors];
+
+                        } else {
+
+                            color = [this.image[pos], this.image[pos], this.image[pos]];
+
+                        }
+
+                        data.data[pos++] = color[0];
+                        data.data[pos++] = color[1];
+                        data.data[pos++] = color[2];
+                        data.data[pos++] = 255;
+                    }
+                }
+
+                rendered.putImageData(data, 0, 0);
+
+            } else {
+                rendered.drawImage( this.image, 0, 0 );
+            }
+
             TILE_CACHE[ this.url ] = rendered;
             //since we are caching the prerendered image on a canvas
             //allow the image to not be held in memory

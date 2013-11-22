@@ -131,6 +131,7 @@ $.Viewer = function( options ) {
         drawerPrev:     [],
         drawerNext:     [],
         zCacheSize:     1,
+        compressedRawData: false,
         viewport:       null,
         navigator:      null,
 
@@ -1417,7 +1418,8 @@ function openTileSource( viewer, source, j ) {
             minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
-            debugGridColor:     _this.debugGridColor
+            debugGridColor:     _this.debugGridColor,
+            rawData:            _this.compressedRawData
         }) );
     
         // now we exit since we don't want to draw right now
@@ -1444,7 +1446,8 @@ function openTileSource( viewer, source, j ) {
         minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
         timeout:            _this.timeout,
         debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor
+        debugGridColor:     _this.debugGridColor,
+        rawData:            _this.compressedRawData
     });
 
     //Instantiate a navigator if configured

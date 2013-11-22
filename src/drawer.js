@@ -120,7 +120,8 @@ $.Drawer = function( options ) {
         alwaysBlend:        $.DEFAULT_SETTINGS.alwaysBlend,
         minPixelRatio:      $.DEFAULT_SETTINGS.minPixelRatio,
         debugMode:          $.DEFAULT_SETTINGS.debugMode,
-        timeout:            $.DEFAULT_SETTINGS.timeout
+        timeout:            $.DEFAULT_SETTINGS.timeout,
+        rawData:            false
 
     }, options );
 
@@ -340,6 +341,75 @@ $.Drawer.prototype = {
         this.midUpdate = false;
         //this.profiler.endUpdate();
         return this;
+    },
+
+    /**
+     * Used internally to load images when required.  May also be used to
+     * preload a set of images so the browser will have them available in
+     * the local cache to optimize user experience in certain cases. Because
+     * the number of parallel image loads is configurable, if too many images
+     * are currently being loaded, the request will be ignored.  Since by
+     * default drawer.imageLoaderLimit is 0, the native browser parallel
+     * image loading policy will be used.
+     * @method
+     * @param {String} src - The url of the image to load.
+     * @param {Function} callback - The function that will be called with the
+     *      Image object as the only parameter if it was loaded successfully.
+     *      If an error occured, or the request timed out or was aborted,
+     *      the parameter is null instead.
+     * @return {Boolean} loading - Whether the request was submitted or ignored
+     *      based on OpenSeadragon.DEFAULT_SETTINGS.imageLoaderLimit.
+     */
+    loadRaw: function( src, callback ) {
+        var _this = this,
+            loading = false,
+            image,
+            jobid,
+            complete;
+
+        if ( !this.imageLoaderLimit ||
+              this.downloading < this.imageLoaderLimit ) {
+
+            this.downloading++;
+
+            image = new XMLHttpRequest();
+            image.open('GET', src, true);
+            image.responseType = 'arraybuffer';
+
+            complete = function( imagesrc, resultingImage ){
+                _this.downloading--;
+                if (typeof ( callback ) == "function") {
+                    try {
+                        callback( resultingImage );
+                    } catch ( e ) {
+                        $.console.error(
+                            "%s while executing %s callback: %s",
+                            e.name,
+                            src,
+                            e.message,
+                            e
+                        );
+                    }
+                }
+            };
+
+            image.onload = function(){
+                finishLoadingRaw( image, complete, true, jobid );
+            };
+
+            image.onabort = image.onerror = function(){
+                finishLoadingRaw( image, complete, false, jobid );
+            };
+
+            jobid = window.setTimeout( function(){
+                finishLoadingRaw( image, complete, false, jobid );
+            }, this.timeout );
+
+            loading   = true;
+            image.send();
+        }
+
+        return loading;
     },
 
     /**
@@ -834,12 +904,22 @@ function loadTile( drawer, tile, time ) {
         drawer.midUpdate = false;
         onTileLoad( drawer, tile, time );
     } else {
-        tile.loading = drawer.loadImage(
-            tile.url,
-            function( image ){
-                onTileLoad( drawer, tile, time, image );
-            }
-        );
+        // either load raw data or an image
+        if (drawer.rawData) {
+            tile.loading = drawer.loadRaw(
+                tile.url,
+                function( image ){
+                    onTileLoad( drawer, tile, time, image );
+                }
+            );
+        } else {
+            tile.loading = drawer.loadImage(
+                tile.url,
+                function( image ){
+                    onTileLoad( drawer, tile, time, image );
+                }
+            );
+        }
     }
 }
 
@@ -1122,6 +1202,23 @@ function finishLoadingImage( image, callback, successful, jobid ){
 
 }
 
+function finishLoadingRaw( image, callback, successful, jobid ){
+
+    image.onload = null;
+    image.onabort = null;
+    image.onerror = null;
+    var Zlib = window.Zlib || {};
+    var compressed = new Zlib.Inflate(new Uint8Array(image.response));
+    image = compressed.decompress();
+
+    if ( jobid ) {
+        window.clearTimeout( jobid );
+    }
+    $.requestAnimationFrame( function() {
+        callback( image.src, successful ? image : null);
+    });
+
+}
 
 function drawOverlays( viewport, overlays, container ){
     var i,

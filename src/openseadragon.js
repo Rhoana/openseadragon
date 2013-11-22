@@ -1578,7 +1578,8 @@ window.OpenSeadragon = window.OpenSeadragon || function( options ){
             "jpg":  true,
             "png":  true,
             "tif":  false,
-            "wdp":  false
+            "wdp":  false,
+            "raw": true
         },
         URLPARAMS = {};
 
