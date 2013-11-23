@@ -121,7 +121,13 @@ $.Drawer = function( options ) {
         minPixelRatio:      $.DEFAULT_SETTINGS.minPixelRatio,
         debugMode:          $.DEFAULT_SETTINGS.debugMode,
         timeout:            $.DEFAULT_SETTINGS.timeout,
-        rawData:            false
+
+        // DOJO specific
+        rawData:            false,
+        rawWidth:           512,
+        rawHeight:          512,
+        rawColormap:        null,
+        rawAlpha:           255
 
     }, options );
 
@@ -798,7 +804,12 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
             drawer.tilesMatrix,
             currentTime,
             numberOfTiles,
-            drawer.normHeight
+            drawer.normHeight,
+            drawer.rawData,
+            drawer.rawWidth,
+            drawer.rawHeight,
+            drawer.rawColormap,
+            drawer.rawAlpha
         ),
         drawTile = drawLevel;
 
@@ -857,7 +868,7 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
     return best;
 }
 
-function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight ) {
+function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight, rawData, rawWidth, rawHeight, rawColormap, rawAlpha ) {
     var xMod,
         yMod,
         bounds,
@@ -888,7 +899,13 @@ function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeig
             y,
             bounds,
             exists,
-            url
+            url,
+            // DOJO specific starting here
+            rawData,
+            rawWidth,
+            rawHeight,
+            rawColormap,
+            rawAlpha
         );
     }
 

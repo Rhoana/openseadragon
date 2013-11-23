@@ -131,9 +131,15 @@ $.Viewer = function( options ) {
         drawerPrev:     [],
         drawerNext:     [],
         zCacheSize:     1,
-        compressedRawData: false,
         viewport:       null,
         navigator:      null,
+
+        // DOJO specific
+        rawData:        false,
+        rawWidth:       512,
+        rawHeight:      512,
+        rawColormap:    null,
+        rawAlpha:       255,
 
         //A collection viewport is a seperate viewport used to provide
         //simultanious rendering of sets of tiless
@@ -1419,7 +1425,11 @@ function openTileSource( viewer, source, j ) {
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
             debugGridColor:     _this.debugGridColor,
-            rawData:            _this.compressedRawData
+            rawData:            _this.rawData,
+            rawWidth:           _this.rawWidth,
+            rawHeight:          _this.rawHeight,
+            rawColormap:        _this.rawColormap,
+            rawAlpha:           _this.rawAlpha
         }) );
     
         // now we exit since we don't want to draw right now
@@ -1447,7 +1457,11 @@ function openTileSource( viewer, source, j ) {
         timeout:            _this.timeout,
         debugMode:          _this.debugMode,
         debugGridColor:     _this.debugGridColor,
-        rawData:            _this.compressedRawData
+        rawData:            _this.rawData,
+        rawWidth:           _this.rawWidth,
+        rawHeight:          _this.rawHeight,
+        rawColormap:        _this.rawColormap,
+        rawAlpha:           _this.rawAlpha
     });
 
     //Instantiate a navigator if configured

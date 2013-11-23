@@ -68,7 +68,7 @@
  * @property {Boolean} beingDrawn Whether this tile is currently being drawn
  * @property {Number} lastTouchTime Timestamp the tile was last touched.
  */
-$.Tile = function(level, x, y, bounds, exists, url) {
+$.Tile = function(level, x, y, bounds, exists, url, rawData, rawWidth, rawHeight, rawColormap, rawAlpha) {
     this.level   = level;
     this.x       = x;
     this.y       = y;
@@ -92,6 +92,12 @@ $.Tile = function(level, x, y, bounds, exists, url) {
 
     this.beingDrawn     = false;
     this.lastTouchTime  = 0;
+
+    this.rawData = rawData;
+    this.rawWidth = rawWidth;
+    this.rawHeight = rawHeight;
+    this.rawColormap = rawColormap;
+    this.rawAlpha = rawAlpha;
 };
 
 $.Tile.prototype = {
@@ -190,23 +196,18 @@ $.Tile.prototype = {
 
         if( !TILE_CACHE[ this.url ] ){
             canvas = document.createElement( 'canvas' );
-            canvas.width = 512;//this.image.width;
-            canvas.height = 512;//this.image.height;
+            canvas.width = this.rawWidth;
+            canvas.height = this.rawHeight;
             rendered = canvas.getContext('2d');
 
+            if (this.rawData) {
 
-            //rendered.drawImage( this.image, 0, 0 );
-
-            var colormap = window.DOJO.colormap;
-
-            if (colormap) {
-
-                var data = rendered.createImageData(canvas.width, canvas.height);
-
+                // this is pixel data
+                var data = rendered.createImageData(this.rawWidth, this.rawHeight);
 
                 // loop through pixel data
                 var pos = 0;
-                var max_colors = colormap ? colormap.length : 0;
+                var max_colors = this.rawColormap ? this.colormap.length : 0;
                 for (var v=0;v<canvas.height;v++) {
                     for (var u=0;u<canvas.width;u++) {
 
@@ -214,7 +215,7 @@ $.Tile.prototype = {
 
                         if (max_colors > 0) {
 
-                            color = colormap[this.image[pos] % max_colors];
+                            color = this.rawColormap[this.image[pos] % max_colors];
 
                         } else {
 
@@ -225,14 +226,17 @@ $.Tile.prototype = {
                         data.data[pos++] = color[0];
                         data.data[pos++] = color[1];
                         data.data[pos++] = color[2];
-                        data.data[pos++] = 255;
+                        data.data[pos++] = this.rawAlpha;
                     }
                 }
 
                 rendered.putImageData(data, 0, 0);
 
             } else {
+
+                // standard image case
                 rendered.drawImage( this.image, 0, 0 );
+
             }
 
             TILE_CACHE[ this.url ] = rendered;
