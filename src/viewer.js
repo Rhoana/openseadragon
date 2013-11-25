@@ -135,11 +135,15 @@ $.Viewer = function( options ) {
         navigator:      null,
 
         // DOJO specific
+        overlayDrawer:  null,
         rawData:        false,
         rawWidth:       512,
         rawHeight:      512,
         rawColormap:    null,
         rawAlpha:       255,
+
+        tileSourceLimit:        1,
+        tileSourcePairs:       [],
 
         //A collection viewport is a seperate viewport used to provide
         //simultanious rendering of sets of tiless
@@ -234,6 +238,36 @@ $.Viewer = function( options ) {
             initialTileSource = this.tileSources;
         }
     }
+
+    //Deal with tile sources
+    var initialOverlayTileSource;
+
+    if ( this.overlayTileSources ){
+        // tileSources is a complex option...
+        //
+        // It can be a string, object, or an array of any of strings and objects.
+        // At this point we only care about if it is an Array or not.
+        //
+        if( $.isArray( this.overlayTileSources ) ){
+            
+            if (this.tileSources.length != this.overlayTileSources.length) {
+                throw new Error('The number of overlays must match the number of tileSources.');
+            }
+            
+            initialOverlayTileSource = this.overlayTileSources[ this.initialPage ];
+            
+        } else {
+            initialOverlayTileSource = this.overlayTileSources;
+        }
+
+        // we def. have to fetch 2 items before activating the drawer
+        this.tileSourceLimit = 2;
+
+        for (var x=0; x<this.tileSources.length; x++) {
+            this.tileSourcePairs[x] = {};
+        }
+    }
+    
 
     this.element              = this.element || document.getElementById( this.id );
     this.canvas               = $.makeNeutralElement( "div" );
@@ -372,29 +406,39 @@ $.Viewer = function( options ) {
 
     if ( initialTileSource ) {
         // open the first tile source (j=0)
-        this.open( initialTileSource, 0 );
+        this.open( initialTileSource, 0, false );
         
         if (this.tileSources.length > 1) {
 
             // if there are multiple tilesources, open as many as zCacheSize states
             for(var j=this.zCacheSize; j>0; --j) {
-                this.open( this.tileSources[ this.initialPage + j ], j );
+                this.open( this.tileSources[ this.initialPage + j ], j, false );
             }
 
         }
 
-        // if (this.id[0] != 'n') {
-        //     this.open( this.tileSources[ this.initialPage+1 ],  true );
-        // }
-
         if ( this.tileSources.length > 1 ) {
 
             // setup sequence preloading for smooth transitioning between images
-            
-
             this._updateSequenceButtons( this.initialPage );
         }
     }
+
+    if ( initialOverlayTileSource ) {
+        // open the first tile source (j=0)
+        this.open( initialOverlayTileSource, 0, true );
+        
+        if (this.overlayTileSources.length > 1) {
+
+            // if there are multiple tilesources, open as many as zCacheSize states
+            for(var k=this.zCacheSize; k>0; --k) {
+                this.open( this.overlayTileSources[ this.initialPage + k ], k, true );
+            }
+
+        }
+
+    }
+
 
     for ( i = 0; i < this.customControls.length; i++ ) {
         this.addControl(
@@ -469,7 +513,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
      * @param {String|Object|Function}
      * @return {OpenSeadragon.Viewer} Chainable.
      */
-    open: function ( tileSource, i ) {
+    open: function ( tileSource, i, overlay ) {
         var _this = this,
             customTileSource,
             readySource,
@@ -492,7 +536,29 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             if ( $.type( tileSource ) == 'string') {
                 //If its still a string it means it must be a url at this point
                 tileSource = new $.TileSource( tileSource, function( event ){
-                    openTileSource( _this, event.tileSource, i );
+
+                    // here, we have to wait for both tilesources
+                    // a) the image
+                    // b) the segmentation
+
+                    var pair = _this.tileSourcePairs[i];
+
+                    if (!overlay) {
+                        pair.image = event.tileSource;
+                    } else {
+                        pair.segmentation = event.tileSource;
+                    }
+
+                    if (_this.tileSourceLimit == 1) {
+                        // we do not need to wait
+                        openTileSource( _this, event.tileSource, null, i);
+                    } else {
+                        if (pair.hasOwnProperty('image') && pair.hasOwnProperty('segmentation')) {
+                            // now we have a) and b) so we can open the tile source
+                            openTileSource( _this, pair.image, pair.segmentation, i );
+                        }
+                    }
+                    
                 });
                 tileSource.addHandler( 'open-failed', function ( event ) {
                     _this.raiseEvent( 'open-failed', event );
@@ -503,7 +569,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     //Custom tile source
                     customTileSource = new $.TileSource(tileSource);
                     customTileSource.getTileUrl = tileSource.getTileUrl;
-                    openTileSource( _this, customTileSource, i );
+                    openTileSource( _this, customTileSource, i, overlay );
                 } else {
                     //inline configuration
                     $TileSource = $.TileSource.determineType( _this, tileSource );
@@ -516,11 +582,11 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                     }
                     options = $TileSource.prototype.configure.apply( _this, [ tileSource ]);
                     readySource = new $TileSource( options );
-                    openTileSource( _this, readySource, i );
+                    openTileSource( _this, readySource, i, overlay );
                 }
             } else {
                 //can assume it's already a tile source implementation
-                openTileSource( _this, tileSource, i );
+                openTileSource( _this, tileSource, i, overlay );
             }
         }, 1);
 
@@ -1324,15 +1390,16 @@ function _getSafeElemSize (oElement) {
  * @function
  * @private
  */
-function openTileSource( viewer, source, j ) {
+function openTileSource( viewer, source, overlaySource, j ) {
 
 
     if (typeof j == 'undefined') {
         j = 0;
     }
 
-
-    // window.console.log("opentilesource", j);
+    if (typeof overlaySource == 'undefined') {
+        overlaySource = null;
+    }
 
     var _this = viewer,
         overlay,
@@ -1373,6 +1440,10 @@ function openTileSource( viewer, source, j ) {
         if( source ){
             _this.source = source;
         }
+        if( overlaySource ){
+            _this.overlaySource = overlaySource;
+        }
+
         _this.viewport = _this.viewport ? _this.viewport : new $.Viewport({
             containerSize:      THIS[ _this.hash ].prevContainerSize,
             contentSize:        _this.source.dimensions,
@@ -1408,6 +1479,7 @@ function openTileSource( viewer, source, j ) {
         drawerStack.push( new $.Drawer({
             viewer:             _this,
             source:             _this.source,
+            overlaySource:      _this.overlaySource,
             viewport:           _this.viewport,
             element:            _this.canvas,
             canvas:             _this.drawer.canvas,
@@ -1442,7 +1514,7 @@ function openTileSource( viewer, source, j ) {
         source:             _this.source,
         viewport:           _this.viewport,
         element:            _this.canvas,
-        draw: true,
+        draw:               true,
         canvas:             $.makeNeutralElement( "canvas" ),
         overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
         maxImageCacheCount: _this.maxImageCacheCount,
@@ -1457,7 +1529,34 @@ function openTileSource( viewer, source, j ) {
         timeout:            _this.timeout,
         debugMode:          _this.debugMode,
         debugGridColor:     _this.debugGridColor,
-        rawData:            _this.rawData,
+        rawData:            false,
+        rawWidth:           _this.rawWidth,
+        rawHeight:          _this.rawHeight,
+        rawColormap:        _this.rawColormap,
+        rawAlpha:           _this.rawAlpha
+    });
+
+    _this.overlayDrawer = new $.Drawer({
+        viewer:             _this,
+        source:             _this.overlaySource,
+        viewport:           _this.viewport,
+        element:            _this.canvas,
+        draw:               true,
+        canvas:             _this.drawer.canvas,
+        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+        maxImageCacheCount: _this.maxImageCacheCount,
+        imageLoaderLimit:   _this.imageLoaderLimit,
+        minZoomImageRatio:  _this.minZoomImageRatio,
+        wrapHorizontal:     _this.wrapHorizontal,
+        wrapVertical:       _this.wrapVertical,
+        immediateRender:    _this.immediateRender,
+        blendTime:          _this.blendTime,
+        alwaysBlend:        _this.alwaysBlend,
+        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+        timeout:            _this.timeout,
+        debugMode:          _this.debugMode,
+        debugGridColor:     _this.debugGridColor,
+        rawData:            true,
         rawWidth:           _this.rawWidth,
         rawHeight:          _this.rawHeight,
         rawColormap:        _this.rawColormap,
@@ -1811,12 +1910,20 @@ function updateOnce( viewer ) {
 
     if ( animated ) {
         viewer.drawer.update();
+        if (viewer.overlayDrawer) {
+            viewer.overlayDrawer.update();
+        }
+   
         if( viewer.navigator ){
             viewer.navigator.update( viewer.viewport );
         }
         viewer.raiseEvent( "animation" );
     } else if ( THIS[ viewer.hash ].forceRedraw || viewer.drawer.needsUpdate() ) {
         viewer.drawer.update();
+        if (viewer.overlayDrawer) {
+            viewer.overlayDrawer.update();
+        }
+
         if( viewer.navigator ){
             viewer.navigator.update( viewer.viewport );
         }

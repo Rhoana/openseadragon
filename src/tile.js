@@ -207,7 +207,7 @@ $.Tile.prototype = {
 
                 // loop through pixel data
                 var pos = 0;
-                var max_colors = this.rawColormap ? this.colormap.length : 0;
+                var max_colors = this.rawColormap ? this.rawColormap.length : 0;
                 for (var v=0;v<canvas.height;v++) {
                     for (var u=0;u<canvas.width;u++) {
 
@@ -226,7 +226,7 @@ $.Tile.prototype = {
                         data.data[pos++] = color[0];
                         data.data[pos++] = color[1];
                         data.data[pos++] = color[2];
-                        data.data[pos++] = this.rawAlpha;
+                        data.data[pos++] = 100;//this.rawAlpha;
                     }
                 }
 
@@ -246,6 +246,10 @@ $.Tile.prototype = {
         }
 
         rendered = TILE_CACHE[ this.url ];
+
+        if (this.rawData) {
+            context.globalAlpha = 0.5;
+        }
 
         //rendered.save();
         context.drawImage(

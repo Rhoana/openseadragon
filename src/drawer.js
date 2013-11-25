@@ -127,7 +127,7 @@ $.Drawer = function( options ) {
         rawWidth:           512,
         rawHeight:          512,
         rawColormap:        null,
-        rawAlpha:           255
+        rawAlpha:           100
 
     }, options );
 
