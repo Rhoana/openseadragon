@@ -1251,7 +1251,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             antiDrawerStack.splice(0,1);
             antiDrawerStack.push( _this.drawer );
             antiOverlayDrawerStack.splice(0,1);
-            antiOverlayDrawerStack.push( _this.drawer );
+            antiOverlayDrawerStack.push( _this.overlayDrawer );
 
             // and replace it with the new one
             _this.drawer = _this.drawerNew;
@@ -1278,8 +1278,8 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             var newPage = forward ? page + 1 : page - 1;
             if (_this.tileSources.length > newPage && newPage >= 0) {
                 // window.console.log('5 shown', page, 'request', newPage);
-                _this.open( _this.tileSources[ newPage ], newPage );
-                _this.open( _this.overlayTileSources[ newPage ], newPage);
+                _this.open( _this.tileSources[ newPage ], newPage, false );
+                _this.open( _this.overlayTileSources[ newPage ], newPage, true );
             }
 
         });
