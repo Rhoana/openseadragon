@@ -124,6 +124,7 @@ $.Drawer = function( options ) {
 
         // DOJO specific
         colormap:           null,
+        idmap:              null,
         opacity:            100
 
     }, options );
@@ -804,6 +805,7 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
             numberOfTiles,
             drawer.normHeight,
             drawer.colormap,
+            drawer.idmap,
             drawer.opacity
         ),
         drawTile = drawLevel;
@@ -863,7 +865,7 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
     return best;
 }
 
-function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight, colormap, opacity ) {
+function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight, colormap, idmap, opacity ) {
     var xMod,
         yMod,
         bounds,
@@ -900,6 +902,7 @@ function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeig
             tileSource.tileSize,
             tileSource.tileSize,
             colormap,
+            window.DOJO.idmap,
             opacity
         );
     }
@@ -1222,6 +1225,7 @@ function finishLoadingRaw( image, callback, successful, jobid ){
     var Zlib = window.Zlib || {};
     var compressed = new Zlib.Inflate(new Uint8Array(image.response));
     image = compressed.decompress();
+    //image = new Uint32Array(image.buffer);
 
     if ( jobid ) {
         window.clearTimeout( jobid );

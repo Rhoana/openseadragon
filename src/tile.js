@@ -68,7 +68,7 @@
  * @property {Boolean} beingDrawn Whether this tile is currently being drawn
  * @property {Number} lastTouchTime Timestamp the tile was last touched.
  */
-$.Tile = function(level, x, y, bounds, exists, url, rawData, rawWidth, rawHeight, rawColormap, rawAlpha) {
+$.Tile = function(level, x, y, bounds, exists, url, rawData, rawWidth, rawHeight, rawColormap, rawIdMap, rawAlpha) {
     this.level   = level;
     this.x       = x;
     this.y       = y;
@@ -97,6 +97,7 @@ $.Tile = function(level, x, y, bounds, exists, url, rawData, rawWidth, rawHeight
     this.rawWidth = rawWidth;
     this.rawHeight = rawHeight;
     this.rawColormap = rawColormap;
+    this.rawIdMap = rawIdMap;
     this.rawAlpha = rawAlpha;
 };
 
@@ -205,8 +206,11 @@ $.Tile.prototype = {
                 // this is pixel data
                 var data = rendered.createImageData(this.rawWidth, this.rawHeight);
 
+                var rawData = new Uint32Array(this.image.buffer);
+
                 // loop through pixel data
                 var pos = 0;
+                var i = 0;
                 var max_colors = this.rawColormap ? this.rawColormap.length : 0;
                 for (var v=0;v<canvas.height;v++) {
                     for (var u=0;u<canvas.width;u++) {
@@ -215,11 +219,22 @@ $.Tile.prototype = {
 
                         if (max_colors > 0) {
 
-                            color = this.rawColormap[this.image[pos] % max_colors];
+                            var id = rawData[i++];
+
+                            var idmap_entry = this.rawIdMap[id];
+
+                            if (typeof idmap_entry != 'undefined') {
+                                
+                                id = idmap_entry;
+                                // window.console.log('FOUND MERGE!!');
+
+                            }
+
+                            color = this.rawColormap[id % max_colors];
 
                         } else {
 
-                            color = [this.image[pos], this.image[pos], this.image[pos]];
+                            color = [rawData[pos], rawData[pos], rawData[pos]];
 
                         }
 
@@ -232,6 +247,8 @@ $.Tile.prototype = {
 
                 rendered.putImageData(data, 0, 0);
 
+                this.__data = rawData;
+
             } else {
 
                 // standard image case
@@ -242,7 +259,7 @@ $.Tile.prototype = {
             TILE_CACHE[ this.url ] = rendered;
             //since we are caching the prerendered image on a canvas
             //allow the image to not be held in memory
-            this.image = null;
+            //this.image = null;
         }
 
         rendered = TILE_CACHE[ this.url ];

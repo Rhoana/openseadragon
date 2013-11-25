@@ -1593,7 +1593,8 @@ function openTileSource( viewer, source, overlaySource, j ) {
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
             debugGridColor:     _this.debugGridColor,
-            colormap:           _this.colormap
+            colormap:           _this.colormap,
+            idmap:              _this.idmap
         }) );
 
         // now we exit since we don't want to draw right now
@@ -1644,7 +1645,8 @@ function openTileSource( viewer, source, overlaySource, j ) {
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
             debugGridColor:     _this.debugGridColor,
-            colormap:           _this.colormap
+            colormap:           _this.colormap,
+            idmap:              _this.idmap
         });
     }
 
@@ -1823,15 +1825,15 @@ function onBlur(){
 function onCanvasClick( event ) {
     var zoomPerClick,
         factor;
-    if ( this.viewport && event.quick ) {    // ignore clicks where mouse moved
-        zoomPerClick = this.zoomPerClick;
-        factor = event.shift ? 1.0 / zoomPerClick : zoomPerClick;
-        this.viewport.zoomBy(
-            factor,
-            this.viewport.pointFromPixel( event.position, true )
-        );
-        this.viewport.applyConstraints();
-    }
+    // if ( this.viewport && event.quick ) {    // ignore clicks where mouse moved
+    //     zoomPerClick = this.zoomPerClick;
+    //     factor = event.shift ? 1.0 / zoomPerClick : zoomPerClick;
+    //     this.viewport.zoomBy(
+    //         factor,
+    //         this.viewport.pointFromPixel( event.position, true )
+    //     );
+    //     this.viewport.applyConstraints();
+    // }
     this.raiseEvent( 'canvas-click', {
         tracker: event.eventSource,
         position: event.position,
