@@ -139,11 +139,7 @@ $.Viewer = function( options ) {
         overlayDrawerNew: null,
         overlayDrawerPrev: [],
         overlayDrawerNext: [],
-        rawData:        false,
-        rawWidth:       512,
-        rawHeight:      512,
-        rawColormap:    null,
-        rawAlpha:       255,
+        colormap:       null,
 
         tileSourceLimit:        1,
         tileSourcePairs:       [],
@@ -1511,12 +1507,7 @@ function openTileSource( viewer, source, overlaySource, j ) {
             minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
-            debugGridColor:     _this.debugGridColor,
-            rawData:            _this.rawData,
-            rawWidth:           _this.rawWidth,
-            rawHeight:          _this.rawHeight,
-            rawColormap:        _this.rawColormap,
-            rawAlpha:           _this.rawAlpha
+            debugGridColor:     _this.debugGridColor
         }) );
     
         // the drawerStack depends on which direction we move in the sequence strip
@@ -1543,11 +1534,7 @@ function openTileSource( viewer, source, overlaySource, j ) {
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
             debugGridColor:     _this.debugGridColor,
-            rawData:            true,
-            rawWidth:           _this.rawWidth,
-            rawHeight:          _this.rawHeight,
-            rawColormap:        _this.rawColormap,
-            rawAlpha:           100
+            colormap:           _this.colormap
         }) );
 
         // now we exit since we don't want to draw right now
@@ -1574,12 +1561,7 @@ function openTileSource( viewer, source, overlaySource, j ) {
         minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
         timeout:            _this.timeout,
         debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor,
-        rawData:            false,
-        rawWidth:           _this.rawWidth,
-        rawHeight:          _this.rawHeight,
-        rawColormap:        _this.rawColormap,
-        rawAlpha:           _this.rawAlpha
+        debugGridColor:     _this.debugGridColor
     });
 
     if (_this.overlaySource) {
@@ -1603,11 +1585,7 @@ function openTileSource( viewer, source, overlaySource, j ) {
             timeout:            _this.timeout,
             debugMode:          _this.debugMode,
             debugGridColor:     _this.debugGridColor,
-            rawData:            true,
-            rawWidth:           _this.rawWidth,
-            rawHeight:          _this.rawHeight,
-            rawColormap:        _this.rawColormap,
-            rawAlpha:           100
+            colormap:           _this.colormap
         });
     }
 

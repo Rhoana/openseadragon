@@ -123,11 +123,8 @@ $.Drawer = function( options ) {
         timeout:            $.DEFAULT_SETTINGS.timeout,
 
         // DOJO specific
-        rawData:            false,
-        rawWidth:           512,
-        rawHeight:          512,
-        rawColormap:        null,
-        rawAlpha:           100
+        colormap:           null,
+        opacity:            100
 
     }, options );
 
@@ -806,11 +803,8 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
             currentTime,
             numberOfTiles,
             drawer.normHeight,
-            drawer.rawData,
-            drawer.rawWidth,
-            drawer.rawHeight,
-            drawer.rawColormap,
-            drawer.rawAlpha
+            drawer.colormap,
+            drawer.opacity
         ),
         drawTile = drawLevel;
 
@@ -869,7 +863,7 @@ function updateTile( drawer, drawLevel, haveDrawn, x, y, level, levelOpacity, le
     return best;
 }
 
-function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight, rawData, rawWidth, rawHeight, rawColormap, rawAlpha ) {
+function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeight, colormap, opacity ) {
     var xMod,
         yMod,
         bounds,
@@ -902,11 +896,11 @@ function getTile( x, y, level, tileSource, tilesMatrix, time, numTiles, normHeig
             exists,
             url,
             // DOJO specific starting here
-            rawData,
-            rawWidth,
-            rawHeight,
-            rawColormap,
-            rawAlpha
+            tileSource.fileFormat == "raw",
+            tileSource.tileSize,
+            tileSource.tileSize,
+            colormap,
+            opacity
         );
     }
 
@@ -923,7 +917,7 @@ function loadTile( drawer, tile, time ) {
         onTileLoad( drawer, tile, time );
     } else {
         // either load raw data or an image
-        if (drawer.rawData) {
+        if (drawer.source.fileFormat == "raw") {
             tile.loading = drawer.loadRaw(
                 tile.url,
                 function( image ){
