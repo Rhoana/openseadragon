@@ -1231,13 +1231,87 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
         // install the handler to listen to a single update-done event
         // which gets fired once the next or previous drawer has
         // finished loading
-        this.addHandler( 'update-done', function(event) {
+        // this.addHandler( 'update-done', function(event) {
 
-            //window.console.log('3 update-done', page);
+        //     //window.console.log('3 update-done', page);
 
-            var _this = event.eventSource; // the viewer
+        //     var _this = event.eventSource; // the viewer
 
-            _this.removeAllHandlers( 'update-done' );
+
+
+        //     _this.removeAllHandlers( 'update-done' );
+
+        //     // activate drawing for the new drawer
+        //     _this.drawerNew.draw = true;
+        //     _this.overlayDrawerNew.draw = true;
+
+        //     // update the opposite drawerStack with the current drawer
+        //     var antiDrawerStack = forward ? _this.drawerPrev : _this.drawerNext;
+        //     var antiOverlayDrawerStack = forward ? _this.overlayDrawerPrev : _this.overlayDrawerNext;
+        //     _this.drawer.updateAgain = true;
+        //     _this.overlayDrawer.updateAgain = true;
+        //     antiDrawerStack.splice(0,1);
+        //     antiDrawerStack.push( _this.drawer );
+        //     antiOverlayDrawerStack.splice(0,1);
+        //     antiOverlayDrawerStack.push( _this.overlayDrawer );
+
+        //     // and replace it with the new one
+        //     _this.drawer = _this.drawerNew;
+        //     _this.overlayDrawer = _this.overlayDrawerNew;
+            
+
+        //     //window.console.log('4 beforeTileSource',page, _this.tileSources.length);
+
+        //     // setup the next drawer if there is any
+        //     //var newPage = forward ? page + 1 : page - 1;
+
+        //     // window.console.log('prevStack', _this.drawerPrev.length);
+        //     // window.console.log('nextStack', _this.drawerNext.length);
+
+        //     // check if we have enough cached tileSources
+        //     // if yes, then exit
+        //     if (forward && _this.drawerNext.length == _this.zCacheSize) {
+        //         return;
+        //     }
+        //     if (!forward && _this.drawerPrev.length == _this.zCacheSize) {
+        //         return;
+        //     }
+
+        //     var newPage = forward ? page + 1 : page - 1;
+        //     if (_this.tileSources.length > newPage && newPage >= 0) {
+        //         // window.console.log('5 shown', page, 'request', newPage);
+        //         _this.open( _this.tileSources[ newPage ], newPage, false );
+        //         _this.open( _this.overlayTileSources[ newPage ], newPage, true );
+        //     }
+
+        // });
+
+        //window.console.log('1 before DrawerStack length', drawerStack.length, forward);
+
+        // prepare the next drawer if there is any
+        if ( drawerStack.length > 0 ) {
+
+            this.drawerNew = drawerStack.pop();
+            this.overlayDrawerNew = overlayDrawerStack.pop();
+
+            //window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
+
+            // and start loading the tiles
+            while(this.drawerNew.updateAgain) {
+                this.drawerNew.update(true);
+            }
+
+            while(this.overlayDrawerNew.updateAgain) {
+                this.overlayDrawerNew.update(false);
+            }
+
+
+
+            var _this = this; // the viewer
+
+
+
+            //_this.removeAllHandlers( 'update-done' );
 
             // activate drawing for the new drawer
             _this.drawerNew.draw = true;
@@ -1256,6 +1330,8 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             // and replace it with the new one
             _this.drawer = _this.drawerNew;
             _this.overlayDrawer = _this.overlayDrawerNew;
+            // _this.drawer.update(true);
+            // _this.overlayDrawerNew.update(false);
             
 
             //window.console.log('4 beforeTileSource',page, _this.tileSources.length);
@@ -1282,23 +1358,6 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                 _this.open( _this.overlayTileSources[ newPage ], newPage, true );
             }
 
-        });
-
-        //window.console.log('1 before DrawerStack length', drawerStack.length, forward);
-
-        // prepare the next drawer if there is any
-        if ( drawerStack.length > 0 ) {
-
-            this.drawerNew = drawerStack.pop();
-            this.overlayDrawerNew = overlayDrawerStack.pop();
-
-            //window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
-
-            // and start loading the tiles
-            while(this.drawerNew.updateAgain) {
-                this.drawerNew.update();
-                this.overlayDrawerNew.update();
-            }
 
             //window.console.log('6 updateAgainFalse', this.drawerNew.updateAgain);
 
@@ -1946,9 +2005,25 @@ function updateOnce( viewer ) {
         viewer.raiseEvent( "animation" );
     } else if ( THIS[ viewer.hash ].forceRedraw || viewer.drawer.needsUpdate() ) {
         viewer.drawer.update(true);
-        if (viewer.overlayDrawer) {
-            viewer.overlayDrawer.update(false);
-        }
+
+        // install the handler to listen to a single update-done event
+        // which gets fired once the next or previous drawer has
+        // finished loading
+        // viewer.addHandler( 'update-done', function(event) {
+
+        //     var _this = event.eventSource; // the viewer
+
+        //     _this.removeAllHandlers( 'update-done' );
+
+        //     if (viewer.overlayDrawer) {
+                viewer.overlayDrawer.update(false);
+        //     }
+
+        // });
+
+
+
+
 
         if( viewer.navigator ){
             viewer.navigator.update( viewer.viewport );
