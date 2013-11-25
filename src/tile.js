@@ -226,7 +226,7 @@ $.Tile.prototype = {
                         data.data[pos++] = color[0];
                         data.data[pos++] = color[1];
                         data.data[pos++] = color[2];
-                        data.data[pos++] = 100;//this.rawAlpha;
+                        data.data[pos++] = this.rawAlpha;
                     }
                 }
 
@@ -246,10 +246,6 @@ $.Tile.prototype = {
         }
 
         rendered = TILE_CACHE[ this.url ];
-
-        if (this.rawData) {
-            context.globalAlpha = 0.5;
-        }
 
         //rendered.save();
         context.drawImage(

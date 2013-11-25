@@ -340,10 +340,11 @@ $.Drawer.prototype = {
      * @method
      * @return {OpenSeadragon.Drawer} Chainable.
      */
-    update: function() {
+    update: function(clear) {
+
         //this.profiler.beginUpdate();
         this.midUpdate = true;
-        updateViewport( this );
+        updateViewport( this, clear );
         this.midUpdate = false;
         //this.profiler.endUpdate();
         return this;
@@ -552,7 +553,7 @@ $.Drawer.prototype = {
  * how each piece of this routine contributes to the drawing process.  That's
  * why there are so many TODO's inside this function.
  */
-function updateViewport( drawer ) {
+function updateViewport( drawer, clear ) {
 
     drawer.updateAgain = false;
 
@@ -604,7 +605,7 @@ function updateViewport( drawer ) {
     }
 
     //TODO
-    if (drawer.draw) {
+    if (drawer.draw && clear) {
         drawer.canvas.innerHTML   = "";
         if ( USE_CANVAS ) {
             if( drawer.canvas.width  != viewportSize.x ||

@@ -136,6 +136,9 @@ $.Viewer = function( options ) {
 
         // DOJO specific
         overlayDrawer:  null,
+        overlayDrawerNew: null,
+        overlayDrawerPrev: [],
+        overlayDrawerNext: [],
         rawData:        false,
         rawWidth:       512,
         rawHeight:      512,
@@ -248,7 +251,7 @@ $.Viewer = function( options ) {
         // It can be a string, object, or an array of any of strings and objects.
         // At this point we only care about if it is an Array or not.
         //
-        if( $.isArray( this.overlayTileSources ) ){
+        if( $.isArray( this.overlayTileSources ) && this.overlayTileSources.length > 0) {
             
             if (this.tileSources.length != this.overlayTileSources.length) {
                 throw new Error('The number of overlays must match the number of tileSources.');
@@ -256,16 +259,18 @@ $.Viewer = function( options ) {
             
             initialOverlayTileSource = this.overlayTileSources[ this.initialPage ];
             
+
+            // we def. have to fetch 2 items before activating the drawer
+            this.tileSourceLimit = 2;
+
+            for (var x=0; x<this.tileSources.length; x++) {
+                this.tileSourcePairs[x] = {};
+            }
+
         } else {
             initialOverlayTileSource = this.overlayTileSources;
         }
 
-        // we def. have to fetch 2 items before activating the drawer
-        this.tileSourceLimit = 2;
-
-        for (var x=0; x<this.tileSources.length; x++) {
-            this.tileSourcePairs[x] = {};
-        }
     }
     
 
@@ -537,22 +542,24 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
                 //If its still a string it means it must be a url at this point
                 tileSource = new $.TileSource( tileSource, function( event ){
 
-                    // here, we have to wait for both tilesources
-                    // a) the image
-                    // b) the segmentation
-
-                    var pair = _this.tileSourcePairs[i];
-
-                    if (!overlay) {
-                        pair.image = event.tileSource;
-                    } else {
-                        pair.segmentation = event.tileSource;
-                    }
-
                     if (_this.tileSourceLimit == 1) {
                         // we do not need to wait
                         openTileSource( _this, event.tileSource, null, i);
                     } else {
+
+                        // here, we have to wait for both tilesources
+                        // a) the image
+                        // b) the segmentation
+
+                        var pair = _this.tileSourcePairs[i];
+
+                        if (!overlay) {
+                            pair.image = event.tileSource;
+                        } else {
+                            pair.segmentation = event.tileSource;
+                        }
+
+
                         if (pair.hasOwnProperty('image') && pair.hasOwnProperty('segmentation')) {
                             // now we have a) and b) so we can open the tile source
                             openTileSource( _this, pair.image, pair.segmentation, i );
@@ -1223,6 +1230,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
         // the drawerStack depends on which direction we move in the sequence strip
         var drawerStack = forward ? this.drawerNext : this.drawerPrev;
+        var overlayDrawerStack = forward ? this.overlayDrawerNext : this.overlayDrawerPrev;
 
         // install the handler to listen to a single update-done event
         // which gets fired once the next or previous drawer has
@@ -1237,16 +1245,21 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
 
             // activate drawing for the new drawer
             _this.drawerNew.draw = true;
+            _this.overlayDrawerNew.draw = true;
 
             // update the opposite drawerStack with the current drawer
             var antiDrawerStack = forward ? _this.drawerPrev : _this.drawerNext;
+            var antiOverlayDrawerStack = forward ? _this.overlayDrawerPrev : _this.overlayDrawerNext;
             _this.drawer.updateAgain = true;
+            _this.overlayDrawer.updateAgain = true;
             antiDrawerStack.splice(0,1);
             antiDrawerStack.push( _this.drawer );
+            antiOverlayDrawerStack.splice(0,1);
+            antiOverlayDrawerStack.push( _this.drawer );
 
             // and replace it with the new one
             _this.drawer = _this.drawerNew;
-
+            _this.overlayDrawer = _this.overlayDrawerNew;
             
 
             //window.console.log('4 beforeTileSource',page, _this.tileSources.length);
@@ -1270,6 +1283,7 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
             if (_this.tileSources.length > newPage && newPage >= 0) {
                 // window.console.log('5 shown', page, 'request', newPage);
                 _this.open( _this.tileSources[ newPage ], newPage );
+                _this.open( _this.overlayTileSources[ newPage ], newPage);
             }
 
         });
@@ -1280,12 +1294,14 @@ $.extend( $.Viewer.prototype, $.EventSource.prototype, $.ControlDock.prototype, 
         if ( drawerStack.length > 0 ) {
 
             this.drawerNew = drawerStack.pop();
+            this.overlayDrawerNew = overlayDrawerStack.pop();
 
             //window.console.log('2 updateAgainTrue', this.drawerNew.updateAgain);
 
             // and start loading the tiles
             while(this.drawerNew.updateAgain) {
                 this.drawerNew.update();
+                this.overlayDrawerNew.update();
             }
 
             //window.console.log('6 updateAgainFalse', this.drawerNew.updateAgain);
@@ -1479,7 +1495,6 @@ function openTileSource( viewer, source, overlaySource, j ) {
         drawerStack.push( new $.Drawer({
             viewer:             _this,
             source:             _this.source,
-            overlaySource:      _this.overlaySource,
             viewport:           _this.viewport,
             element:            _this.canvas,
             canvas:             _this.drawer.canvas,
@@ -1504,6 +1519,37 @@ function openTileSource( viewer, source, overlaySource, j ) {
             rawAlpha:           _this.rawAlpha
         }) );
     
+        // the drawerStack depends on which direction we move in the sequence strip
+        drawerStack = forward ? _this.overlayDrawerNext : _this.overlayDrawerPrev;
+
+        // create a new drawer and push it to our drawerNext stack
+        drawerStack.push( new $.Drawer({
+            viewer:             _this,
+            source:             _this.overlaySource,
+            viewport:           _this.viewport,
+            element:            _this.canvas,
+            canvas:             _this.drawer.canvas,
+            overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+            maxImageCacheCount: _this.maxImageCacheCount,
+            imageLoaderLimit:   _this.imageLoaderLimit,
+            minZoomImageRatio:  _this.minZoomImageRatio,
+            wrapHorizontal:     _this.wrapHorizontal,
+            wrapVertical:       _this.wrapVertical,
+            draw: false,
+            immediateRender:    _this.immediateRender,
+            blendTime:          _this.blendTime,
+            alwaysBlend:        _this.alwaysBlend,
+            minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+            timeout:            _this.timeout,
+            debugMode:          _this.debugMode,
+            debugGridColor:     _this.debugGridColor,
+            rawData:            true,
+            rawWidth:           _this.rawWidth,
+            rawHeight:          _this.rawHeight,
+            rawColormap:        _this.rawColormap,
+            rawAlpha:           100
+        }) );
+
         // now we exit since we don't want to draw right now
         return;
 
@@ -1536,32 +1582,34 @@ function openTileSource( viewer, source, overlaySource, j ) {
         rawAlpha:           _this.rawAlpha
     });
 
-    _this.overlayDrawer = new $.Drawer({
-        viewer:             _this,
-        source:             _this.overlaySource,
-        viewport:           _this.viewport,
-        element:            _this.canvas,
-        draw:               true,
-        canvas:             _this.drawer.canvas,
-        overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
-        maxImageCacheCount: _this.maxImageCacheCount,
-        imageLoaderLimit:   _this.imageLoaderLimit,
-        minZoomImageRatio:  _this.minZoomImageRatio,
-        wrapHorizontal:     _this.wrapHorizontal,
-        wrapVertical:       _this.wrapVertical,
-        immediateRender:    _this.immediateRender,
-        blendTime:          _this.blendTime,
-        alwaysBlend:        _this.alwaysBlend,
-        minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
-        timeout:            _this.timeout,
-        debugMode:          _this.debugMode,
-        debugGridColor:     _this.debugGridColor,
-        rawData:            true,
-        rawWidth:           _this.rawWidth,
-        rawHeight:          _this.rawHeight,
-        rawColormap:        _this.rawColormap,
-        rawAlpha:           _this.rawAlpha
-    });
+    if (_this.overlaySource) {
+        _this.overlayDrawer = new $.Drawer({
+            viewer:             _this,
+            source:             _this.overlaySource,
+            viewport:           _this.viewport,
+            element:            _this.canvas,
+            draw:               true,
+            canvas:             _this.drawer.canvas,
+            overlays:           [].concat( _this.overlays ).concat( _this.source.overlays ),
+            maxImageCacheCount: _this.maxImageCacheCount,
+            imageLoaderLimit:   _this.imageLoaderLimit,
+            minZoomImageRatio:  _this.minZoomImageRatio,
+            wrapHorizontal:     _this.wrapHorizontal,
+            wrapVertical:       _this.wrapVertical,
+            immediateRender:    _this.immediateRender,
+            blendTime:          _this.blendTime,
+            alwaysBlend:        _this.alwaysBlend,
+            minPixelRatio:      _this.collectionMode ? 0 : _this.minPixelRatio,
+            timeout:            _this.timeout,
+            debugMode:          _this.debugMode,
+            debugGridColor:     _this.debugGridColor,
+            rawData:            true,
+            rawWidth:           _this.rawWidth,
+            rawHeight:          _this.rawHeight,
+            rawColormap:        _this.rawColormap,
+            rawAlpha:           100
+        });
+    }
 
     //Instantiate a navigator if configured
     if ( _this.showNavigator  && !_this.collectionMode && j!==0){
@@ -1909,9 +1957,9 @@ function updateOnce( viewer ) {
     }
 
     if ( animated ) {
-        viewer.drawer.update();
+        viewer.drawer.update(true);
         if (viewer.overlayDrawer) {
-            viewer.overlayDrawer.update();
+            viewer.overlayDrawer.update(false);
         }
    
         if( viewer.navigator ){
@@ -1919,9 +1967,9 @@ function updateOnce( viewer ) {
         }
         viewer.raiseEvent( "animation" );
     } else if ( THIS[ viewer.hash ].forceRedraw || viewer.drawer.needsUpdate() ) {
-        viewer.drawer.update();
+        viewer.drawer.update(true);
         if (viewer.overlayDrawer) {
-            viewer.overlayDrawer.update();
+            viewer.overlayDrawer.update(false);
         }
 
         if( viewer.navigator ){
