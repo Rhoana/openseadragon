@@ -2006,7 +2006,12 @@ function updateOnce( viewer ) {
         }
         viewer.raiseEvent( "animation" );
     } else if ( THIS[ viewer.hash ].forceRedraw || viewer.drawer.needsUpdate() ) {
+
         viewer.drawer.update(true);
+        if (viewer.overlayDrawer) {
+            viewer.overlayDrawer.update(false);
+        }        
+        // viewer.drawer.update(true);
 
         // install the handler to listen to a single update-done event
         // which gets fired once the next or previous drawer has
@@ -2018,7 +2023,7 @@ function updateOnce( viewer ) {
         //     _this.removeAllHandlers( 'update-done' );
 
         //     if (viewer.overlayDrawer) {
-                viewer.overlayDrawer.update(false);
+                // viewer.overlayDrawer.update(false);
         //     }
 
         // });

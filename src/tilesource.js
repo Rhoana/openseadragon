@@ -303,6 +303,7 @@ $.TileSource.prototype = {
 
             options = $TileSource.prototype.configure.apply( _this, [ data, url ]);
             readySource = new $TileSource( options );
+            readySource.minLevel = 9;
             _this.ready = true;
             _this.raiseEvent( 'ready', { tileSource: readySource } );
         };

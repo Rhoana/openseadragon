@@ -69,6 +69,8 @@ $.Viewport = function( options ) {
         zoomPoint:          null,
         viewer:           null,
 
+        forceUpdate:      false,
+
         //configurable options
         springStiffness:    $.DEFAULT_SETTINGS.springStiffness,
         animationTime:      $.DEFAULT_SETTINGS.animationTime,
@@ -637,6 +639,12 @@ $.Viewport.prototype = {
      * @function
      */
     update: function() {
+
+        if (this.forceUpdate) {
+            this.forceUpdate = false;
+            return true;
+        }
+
         var oldCenterX = this.centerSpringX.current.value,
             oldCenterY = this.centerSpringY.current.value,
             oldZoom    = this.zoomSpring.current.value,
