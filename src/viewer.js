@@ -2010,7 +2010,7 @@ function updateOnce( viewer ) {
         viewer.drawer.update(true);
         if (viewer.overlayDrawer) {
             viewer.overlayDrawer.update(false);
-        }        
+        }
         // viewer.drawer.update(true);
 
         // install the handler to listen to a single update-done event
